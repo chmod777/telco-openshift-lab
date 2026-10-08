@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telco-supervisor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telco-supervisor
+  template:
+    metadata:
+      labels:
+        app: telco-supervisor
+    spec:
+      containers:
+        - name: supervisor
+          image: image-registry.openshift-image-registry.svc:5000/hassensiad06-dev/telco-supervisor:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/telco
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: telco-supervisor-config

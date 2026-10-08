@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dns-content
+data:
+  index.html: |
+    {"service":"dns","status":"UP","simulated":true}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dns
+  template:
+    metadata:
+      labels:
+        app: dns
+    spec:
+      containers:
+        - name: http
+          image: image-registry.openshift-image-registry.svc:5000/openshift/httpd:latest
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: content
+              mountPath: /var/www/html
+              readOnly: true
+      volumes:
+        - name: content
+          configMap:
+            name: dns-content
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns
+spec:
+  selector:
+    app: dns
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http

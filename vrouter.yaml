@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vrouter-content
+data:
+  index.html: |
+    {"service":"vrouter","status":"UP","simulated":true}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vrouter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vrouter
+  template:
+    metadata:
+      labels:
+        app: vrouter
+    spec:
+      containers:
+        - name: http
+          image: image-registry.openshift-image-registry.svc:5000/openshift/httpd:latest
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: content
+              mountPath: /var/www/html
+              readOnly: true
+      volumes:
+        - name: content
+          configMap:
+            name: vrouter-content
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vrouter
+spec:
+  selector:
+    app: vrouter
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http
